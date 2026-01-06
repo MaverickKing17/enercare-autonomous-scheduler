@@ -68,10 +68,18 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const streamRef = useRef<MediaStream | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Current transcription chunks
   const currentInputTranscriptionRef = useRef<string>('');
   const currentOutputTranscriptionRef = useRef<string>('');
+
+  // Auto-scroll to bottom of conversation
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [transcription]);
 
   // Tools configuration
   const setEmergencyStatusTool = {
@@ -195,7 +203,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
             setIsConnecting(false);
           },
           onmessage: async (message: LiveServerMessage) => {
-            // Audio processing
             const audioData = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
             if (audioData && outputAudioContextRef.current) {
               const ctx = outputAudioContextRef.current;
@@ -210,14 +217,12 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
               source.onended = () => sourcesRef.current.delete(source);
             }
 
-            // Interrupt detection
             if (message.serverContent?.interrupted) {
               sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }
 
-            // Function calling
             if (message.toolCall) {
               for (const fc of message.toolCall.functionCalls) {
                 const result = await handleToolCall(fc);
@@ -233,7 +238,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
               }
             }
 
-            // Transcription handling
             if (message.serverContent?.outputTranscription) {
               const text = message.serverContent.outputTranscription.text;
               currentOutputTranscriptionRef.current += text;
@@ -280,7 +284,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
           speechConfig: {
             voiceConfig: { 
               prebuiltVoiceConfig: { 
-                // Using Fenrir for Mike (Authoritative) and Kore for Angela (Warm/Professional)
                 voiceName: activePersona === Persona.MIKE ? 'Fenrir' : 'Kore' 
               } 
             }
@@ -304,59 +307,89 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-y-auto space-y-4 mb-4 custom-scrollbar pr-2">
+      {/* Enhanced Conversation Log */}
+      <div 
+        ref={scrollRef}
+        className="flex-grow overflow-y-auto space-y-6 mb-6 custom-scrollbar pr-3 scroll-smooth"
+      >
         {transcription.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-40">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
-               <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-               </svg>
+          <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-6">
+            <div className="relative">
+              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 shadow-inner">
+                 <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                 </svg>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-white rounded-full"></div>
             </div>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ready for priority dispatch</p>
+            <div className="space-y-1">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-800">Priority Line Open</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Awaiting Caller Input</p>
+            </div>
           </div>
         ) : (
-          transcription.map((entry, i) => (
-            <div key={i} className={`flex flex-col ${entry.role === 'user' ? 'items-end' : 'items-start'}`}>
-              <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400 mb-1">
-                {entry.role === 'user' ? 'Caller' : entry.persona || activePersona}
-              </span>
-              <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${
-                entry.role === 'user' 
-                  ? 'bg-white border border-slate-100 text-[#1D1D1D]' 
-                  : entry.persona === Persona.MIKE || (entry.role === 'model' && activePersona === Persona.MIKE)
-                    ? 'bg-slate-900 text-white' 
-                    : 'bg-[#E31937] text-white'
-              }`}>
-                {entry.text}
+          transcription.map((entry, i) => {
+            const isUser = entry.role === 'user';
+            const isMike = entry.persona === Persona.MIKE || (!isUser && activePersona === Persona.MIKE);
+            
+            return (
+              <div key={i} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} group animate-in slide-in-from-bottom-2 duration-300`}>
+                <div className={`flex items-center gap-2 mb-1.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${isUser ? 'text-[#6B7280]' : isMike ? 'text-slate-900' : 'text-[#E31937]'}`}>
+                    {isUser ? 'Caller' : isMike ? 'Mike (Emergency)' : 'Angela (Enercare)'}
+                  </span>
+                  {!isUser && (
+                    <span className={`w-1.5 h-1.5 rounded-full ${isSessionActive ? 'bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]' : 'bg-slate-300'}`}></span>
+                  )}
+                </div>
+                <div 
+                  className={`relative max-w-[88%] px-5 py-4 rounded-[1.5rem] text-[13px] font-medium leading-[1.6] shadow-md transition-all ${
+                    isUser 
+                      ? 'bg-white border border-[#E9EBEE] text-[#1A1A1A] rounded-tr-none' 
+                      : isMike 
+                        ? 'bg-slate-900 text-white rounded-tl-none shadow-xl' 
+                        : 'bg-[#E31937] text-white rounded-tl-none'
+                  }`}
+                >
+                  {entry.text}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
-      <button
-        onClick={isSessionActive ? stopSession : startSession}
-        disabled={isConnecting}
-        className={`w-full py-6 rounded-3xl font-black text-sm uppercase tracking-[0.2em] transition-all duration-300 shadow-xl flex items-center justify-center gap-3 ${
-          isSessionActive 
-            ? 'bg-white border-2 border-[#E31937] text-[#E31937] hover:bg-[#E31937]/5' 
-            : 'bg-[#E31937] text-white hover:scale-[1.02] active:scale-[0.98]'
-        } ${isConnecting ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        {isConnecting ? (
-          <span className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-slate-200 border-t-[#E31937] rounded-full animate-spin"></div>
-            Connecting...
-          </span>
-        ) : isSessionActive ? (
-          <>
-            <div className="w-2 h-2 bg-[#E31937] rounded-full animate-pulse"></div>
-            End Connection
-          </>
-        ) : (
-          'Establish Priority Line'
-        )}
-      </button>
+      {/* Control Button */}
+      <div className="pt-2">
+        <button
+          onClick={isSessionActive ? stopSession : startSession}
+          disabled={isConnecting}
+          className={`w-full py-6 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.3em] transition-all duration-300 shadow-xl flex items-center justify-center gap-3 active:scale-[0.97] ${
+            isSessionActive 
+              ? 'bg-white border-2 border-[#E31937] text-[#E31937] hover:bg-slate-50' 
+              : 'bg-[#E31937] text-white hover:bg-[#C1132C] hover:shadow-[0_12px_30px_rgba(227,25,55,0.3)]'
+          } ${isConnecting ? 'opacity-70 cursor-wait' : ''}`}
+        >
+          {isConnecting ? (
+            <span className="flex items-center gap-3">
+              <div className="w-4 h-4 border-2 border-slate-200 border-t-[#E31937] rounded-full animate-spin"></div>
+              Linking Dispatch...
+            </span>
+          ) : isSessionActive ? (
+            <>
+              <div className="w-2 h-2 bg-[#E31937] rounded-full animate-ping"></div>
+              Disconnect Line
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+              Open Priority Line
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 };
