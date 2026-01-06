@@ -4,6 +4,12 @@ import { GoogleGenAI, Modality, Type, LiveServerMessage } from '@google/genai';
 import { Persona, TranscriptionEntry, CustomerData } from '../types';
 import { SYSTEM_INSTRUCTION, WEBHOOK_URL } from '../constants';
 
+// Avatar URLs for a professional look
+const AVATARS = {
+  [Persona.ANGELA]: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=100&h=100',
+  [Persona.MIKE]: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=100&h=100'
+};
+
 // Manual implementation of base64 decoding as per guidelines
 function decode(base64: string) {
   const binaryString = atob(base64);
@@ -332,7 +338,8 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
             const isUser = entry.role === 'user';
             const isLastMessage = i === transcription.length - 1;
             const isModelSpeaking = !isUser && isLastMessage && currentOutputTranscriptionRef.current.length > 0;
-            const isMike = entry.persona === Persona.MIKE || (!isUser && activePersona === Persona.MIKE);
+            const persona = entry.persona || activePersona;
+            const isMike = persona === Persona.MIKE;
             
             // Check for Gas Safety Protocol Keywords
             const textLower = entry.text.toLowerCase();
@@ -344,51 +351,71 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
             );
             
             return (
-              <div key={i} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} group animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-500`}>
-                <div className={`flex items-center gap-2 mb-1.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${
-                    isUser ? 'text-[#6B7280]' : 
-                    isSafetyProtocol ? 'text-red-600 font-extrabold flex items-center gap-1.5' :
-                    isMike ? 'text-slate-900' : 'text-[#E31937]'
-                  }`}>
-                    {isSafetyProtocol && (
-                      <span className="flex h-2.5 w-2.5 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
-                      </span>
-                    )}
-                    {isUser ? 'Caller' : isMike ? (isSafetyProtocol ? 'MIKE - SAFETY ALERT' : 'Mike (Emergency)') : 'Angela (Enercare)'}
-                  </span>
-                  
-                  {isModelSpeaking && (
-                    <div className="flex gap-0.5 items-center ml-1">
-                      <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                      <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                      <div className="w-1 h-1 bg-current rounded-full animate-bounce"></div>
+              <div key={i} className={`flex ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start gap-3 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-500`}>
+                {/* Speaker Avatar */}
+                <div className="flex-shrink-0 mt-1">
+                  {isUser ? (
+                    <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <img 
+                        src={AVATARS[persona]} 
+                        alt={persona}
+                        className={`w-10 h-10 rounded-full border-2 object-cover shadow-md ${
+                          isSafetyProtocol ? 'border-red-500 animate-pulse' : isMike ? 'border-slate-800' : 'border-[#E31937]'
+                        }`}
+                      />
+                      {isModelSpeaking && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full animate-pulse"></span>
+                      )}
                     </div>
                   )}
                 </div>
-                
-                <div 
-                  className={`relative max-w-[90%] px-5 py-4 rounded-[1.5rem] text-[12.5px] font-medium leading-[1.6] shadow-md transition-all duration-500 ${
-                    isUser 
-                      ? 'bg-white border border-[#E9EBEE] text-[#1A1A1A] rounded-tr-none' 
-                      : isSafetyProtocol
-                        ? 'bg-red-700 text-white border-4 border-amber-400 rounded-tl-none shadow-[0_0_20px_rgba(185,28,28,0.4)] uppercase tracking-tight'
-                        : isMike 
-                          ? `bg-slate-900 text-white rounded-tl-none shadow-xl ${isLastMessage ? 'ring-2 ring-slate-400/50 animate-pulse' : ''}` 
-                          : `bg-[#E31937] text-white rounded-tl-none ${isLastMessage ? 'ring-2 ring-red-400/50 animate-pulse' : ''}`
-                  }`}
-                >
-                  {isSafetyProtocol && (
-                    <div className="text-[10px] font-black mb-1 opacity-90 border-b border-white/20 pb-1.5 mb-2 flex items-center justify-between">
-                      <span>CRITICAL SAFETY ACTION</span>
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
-                  {entry.text}
+
+                <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                  <div className={`flex items-center gap-2 mb-1 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${
+                      isUser ? 'text-[#6B7280]' : 
+                      isSafetyProtocol ? 'text-red-600 font-extrabold flex items-center gap-1.5' :
+                      isMike ? 'text-slate-900' : 'text-[#E31937]'
+                    }`}>
+                      {isUser ? 'Caller' : isMike ? (isSafetyProtocol ? 'MIKE - SAFETY ALERT' : 'Mike (Emergency)') : 'Angela (Enercare)'}
+                    </span>
+                    
+                    {isModelSpeaking && (
+                      <div className="flex gap-0.5 items-center ml-1">
+                        <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                        <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                        <div className="w-1 h-1 bg-current rounded-full animate-bounce"></div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div 
+                    className={`relative px-4 py-3 rounded-[1.25rem] text-[12.5px] font-medium leading-[1.6] shadow-md transition-all duration-500 ${
+                      isUser 
+                        ? 'bg-white border border-[#E9EBEE] text-[#1A1A1A] rounded-tr-none' 
+                        : isSafetyProtocol
+                          ? 'bg-red-700 text-white border-4 border-amber-400 rounded-tl-none shadow-[0_0_20px_rgba(185,28,28,0.4)] uppercase tracking-tight'
+                          : isMike 
+                            ? `bg-slate-900 text-white rounded-tl-none shadow-xl ${isLastMessage ? 'ring-2 ring-slate-400/50' : ''}` 
+                            : `bg-[#E31937] text-white rounded-tl-none ${isLastMessage ? 'ring-2 ring-red-400/50' : ''}`
+                    }`}
+                  >
+                    {isSafetyProtocol && (
+                      <div className="text-[10px] font-black mb-1 opacity-90 border-b border-white/20 pb-1.5 mb-2 flex items-center justify-between">
+                        <span>CRITICAL SAFETY ACTION</span>
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                    {entry.text}
+                  </div>
                 </div>
               </div>
             );
