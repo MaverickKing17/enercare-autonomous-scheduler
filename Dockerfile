@@ -6,11 +6,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/*
 
 # 2. Copy your zip file from the Space into the build container
-# REPLACE 'project.zip' with the exact name from your screenshot
-COPY project.zip .
+# This MUST match your filename: enercare-voice.zip
+COPY enercare-voice.zip .
 
 # 3. Unzip the file and remove the zip to save space
-RUN unzip project.zip && rm project.zip
+RUN unzip enercare-voice.zip && rm enercare-voice.zip
 
 # Step 2: Build the Enercare App
 # Note: package.json must be in the top level of your zip
