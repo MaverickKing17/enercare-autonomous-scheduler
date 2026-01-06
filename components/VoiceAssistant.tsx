@@ -59,7 +59,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
   onSessionChange 
 }) => {
   const [transcription, setTranscription] = useState<TranscriptionEntry[]>([]);
-  const [activePersona, setActivePersona] = useState<Persona>(Persona.CHLOE);
+  const [activePersona, setActivePersona] = useState<Persona>(Persona.ANGELA);
   const [isConnecting, setIsConnecting] = useState(false);
   
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -69,14 +69,18 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Current transcription chunks
+  const currentInputTranscriptionRef = useRef<string>('');
+  const currentOutputTranscriptionRef = useRef<string>('');
+
   // Tools configuration
   const setEmergencyStatusTool = {
     name: 'set_emergency_status',
     parameters: {
       type: Type.OBJECT,
-      description: 'Mark the current call as an emergency and switch to Sam.',
+      description: 'Mark the call as an emergency and switch to Mike immediately.',
       properties: {
-        active: { type: Type.BOOLEAN, description: 'True if it is an emergency.' }
+        active: { type: Type.BOOLEAN, description: 'True if it is an emergency (leaks, smells, floods).' }
       },
       required: ['active']
     }
@@ -86,15 +90,16 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
     name: 'submit_lead',
     parameters: {
       type: Type.OBJECT,
-      description: 'Submit customer lead data to the backend.',
+      description: 'Record customer details and problem summary for Enercare dispatch.',
       properties: {
         name: { type: Type.STRING, description: 'Customer full name' },
         phone: { type: Type.STRING, description: 'Customer phone number' },
         heatingType: { type: Type.STRING, description: 'Current heating source' },
-        age: { type: Type.STRING, description: 'Age of the current unit' },
-        summary: { type: Type.STRING, description: 'Brief summary of the issue' },
-        temp: { type: Type.STRING, description: 'Status tag, e.g., "HOT INSTALL"' }
-      }
+        age: { type: Type.STRING, description: 'Age of the unit' },
+        summary: { type: Type.STRING, description: 'Summary of the issue' },
+        temp: { type: Type.STRING, description: 'Tag: HOT INSTALL or REPAIR' }
+      },
+      required: ['name', 'phone']
     }
   };
 
@@ -113,13 +118,15 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
     onSessionChange(false);
     setIsConnecting(false);
     sessionPromiseRef.current = null;
+    setTranscription([]);
   }, [onSessionChange]);
 
   const handleToolCall = useCallback(async (fc: any) => {
     if (fc.name === 'set_emergency_status') {
-      onSetEmergency(fc.args.active);
-      setActivePersona(fc.args.active ? Persona.SAM : Persona.CHLOE);
-      return { status: 'success', message: `Emergency status set to ${fc.args.active}` };
+      const isEmergency = !!fc.args.active;
+      onSetEmergency(isEmergency);
+      setActivePersona(isEmergency ? Persona.MIKE : Persona.ANGELA);
+      return { status: 'success', activeAgent: isEmergency ? 'Mike' : 'Angela' };
     }
     if (fc.name === 'submit_lead') {
       onUpdateLead({
@@ -139,7 +146,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       } catch (e) {
         console.error('Webhook failed', e);
       }
-      return { status: 'success', message: 'Lead submitted successfully' };
+      return { status: 'success', message: 'Lead logged for Enercare dispatch' };
     }
     return { status: 'error', message: 'Unknown tool' };
   }, [onSetEmergency, onUpdateLead]);
@@ -188,7 +195,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
             setIsConnecting(false);
           },
           onmessage: async (message: LiveServerMessage) => {
-            // Audio output
+            // Audio processing
             const audioData = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
             if (audioData && outputAudioContextRef.current) {
               const ctx = outputAudioContextRef.current;
@@ -203,14 +210,14 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
               source.onended = () => sourcesRef.current.delete(source);
             }
 
-            // Interruption
+            // Interrupt detection
             if (message.serverContent?.interrupted) {
               sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }
 
-            // Tool calls
+            // Function calling
             if (message.toolCall) {
               for (const fc of message.toolCall.functionCalls) {
                 const result = await handleToolCall(fc);
@@ -226,12 +233,36 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
               }
             }
 
-            // Transcription
+            // Transcription handling
             if (message.serverContent?.outputTranscription) {
-              setTranscription(prev => [...prev, { role: 'model', text: message.serverContent!.outputTranscription!.text, persona: activePersona }]);
+              const text = message.serverContent.outputTranscription.text;
+              currentOutputTranscriptionRef.current += text;
+              setTranscription(prev => {
+                const last = prev[prev.length - 1];
+                if (last?.role === 'model') {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { ...last, text: currentOutputTranscriptionRef.current };
+                  return updated;
+                }
+                return [...prev, { role: 'model', text: currentOutputTranscriptionRef.current, persona: activePersona }];
+              });
+            } else if (message.serverContent?.inputTranscription) {
+              const text = message.serverContent.inputTranscription.text;
+              currentInputTranscriptionRef.current += text;
+              setTranscription(prev => {
+                const last = prev[prev.length - 1];
+                if (last?.role === 'user') {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { ...last, text: currentInputTranscriptionRef.current };
+                  return updated;
+                }
+                return [...prev, { role: 'user', text: currentInputTranscriptionRef.current }];
+              });
             }
-            if (message.serverContent?.inputTranscription) {
-              setTranscription(prev => [...prev, { role: 'user', text: message.serverContent!.inputTranscription!.text }]);
+
+            if (message.serverContent?.turnComplete) {
+              currentInputTranscriptionRef.current = '';
+              currentOutputTranscriptionRef.current = '';
             }
           },
           onerror: (e) => {
@@ -247,7 +278,12 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
           systemInstruction: SYSTEM_INSTRUCTION,
           tools: [{ functionDeclarations: [setEmergencyStatusTool, submitLeadTool] }],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
+            voiceConfig: { 
+              prebuiltVoiceConfig: { 
+                // Using Fenrir for Mike (Authoritative) and Kore for Angela (Warm/Professional)
+                voiceName: activePersona === Persona.MIKE ? 'Fenrir' : 'Kore' 
+              } 
+            }
           },
           outputAudioTranscription: {},
           inputAudioTranscription: {}
@@ -282,12 +318,14 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
           transcription.map((entry, i) => (
             <div key={i} className={`flex flex-col ${entry.role === 'user' ? 'items-end' : 'items-start'}`}>
               <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400 mb-1">
-                {entry.role === 'user' ? 'Caller' : entry.persona || 'Agent'}
+                {entry.role === 'user' ? 'Caller' : entry.persona || activePersona}
               </span>
               <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${
                 entry.role === 'user' 
                   ? 'bg-white border border-slate-100 text-[#1D1D1D]' 
-                  : 'bg-[#E31937] text-white'
+                  : entry.persona === Persona.MIKE || (entry.role === 'model' && activePersona === Persona.MIKE)
+                    ? 'bg-slate-900 text-white' 
+                    : 'bg-[#E31937] text-white'
               }`}>
                 {entry.text}
               </div>
@@ -307,7 +345,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       >
         {isConnecting ? (
           <span className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-slate-200 border-t-[#E31937] rounded-full animate-spin"></div>
             Connecting...
           </span>
         ) : isSessionActive ? (

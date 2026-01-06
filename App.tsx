@@ -14,7 +14,7 @@ const App: React.FC = () => {
     unitAge: '',
     problemSummary: '',
     isHotInstall: false,
-    activeAgent: 'Chloe'
+    activeAgent: 'Angela'
   });
   const [emergencyActive, setEmergencyActive] = useState(false);
 
@@ -25,9 +25,9 @@ const App: React.FC = () => {
   const handleSetEmergency = useCallback((active: boolean) => {
     setEmergencyActive(active);
     if (active) {
-      setCustomerData(prev => ({ ...prev, activeAgent: 'Sam' }));
+      setCustomerData(prev => ({ ...prev, activeAgent: 'Mike' }));
     } else {
-      setCustomerData(prev => ({ ...prev, activeAgent: 'Chloe' }));
+      setCustomerData(prev => ({ ...prev, activeAgent: 'Angela' }));
     }
   }, []);
 
