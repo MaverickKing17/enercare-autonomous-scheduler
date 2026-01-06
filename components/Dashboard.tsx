@@ -11,125 +11,222 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) => {
   const normalizedHeating = data.heatingType?.toLowerCase() || '';
+  
+  // Calculate completion percentage
+  const fields = [data.name, data.phone, data.address, data.heatingType, data.unitAge, data.problemSummary];
+  const filledFields = fields.filter(f => !!f).length;
+  const completionPercent = Math.round((filledFields / fields.length) * 100);
 
   return (
     <div className="space-y-6 lg:space-y-8 animate-in fade-in duration-700 pb-10">
-      {/* Dynamic Header - Enercare Branding */}
-      <div className={`p-6 lg:p-8 rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-6 border transition-all duration-700 ${
+      {/* Premium Header */}
+      <div className={`relative overflow-hidden p-8 lg:p-10 rounded-[2.5rem] flex flex-col md:flex-row justify-between items-center gap-8 border transition-all duration-700 ${
         isEmergency 
-          ? 'bg-[#1D1D1D] border-[#1D1D1D] shadow-[0_20px_60px_rgba(29,29,29,0.3)]' 
-          : 'bg-white border-slate-200 shadow-sm'
+          ? 'bg-gradient-to-br from-[#1A1A1A] to-[#2D2D2D] border-slate-800 shadow-[0_30px_70px_rgba(0,0,0,0.4)]' 
+          : 'bg-white border-slate-100 shadow-[0_15px_40px_rgba(0,0,0,0.03)]'
       }`}>
-        <div className="flex items-center gap-6">
-          <div className={`w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center transition-all ${isEmergency ? 'bg-[#E31937] text-white scale-110' : 'bg-[#E31937] text-white shadow-lg'}`}>
-            {isEmergency ? (
-              <svg className="w-8 h-8 lg:w-10 lg:h-10 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            ) : (
-              <span className="text-2xl lg:text-3xl font-black italic select-none">e</span>
+        {/* Background Accent */}
+        <div className={`absolute top-0 right-0 w-96 h-96 blur-[120px] opacity-10 rounded-full pointer-events-none ${isEmergency ? 'bg-[#E31937]' : 'bg-[#E31937]'}`}></div>
+
+        <div className="flex items-center gap-8 relative z-10">
+          <div className={`relative group`}>
+            <div className={`w-16 h-16 lg:w-20 lg:h-20 rounded-[1.75rem] flex items-center justify-center transition-all duration-500 shadow-2xl ${
+              isEmergency ? 'bg-[#E31937] text-white rotate-3 scale-110' : 'bg-[#E31937] text-white -rotate-3'
+            }`}>
+              {isEmergency ? (
+                <svg className="w-10 h-10 lg:w-12 lg:h-12 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              ) : (
+                <span className="text-3xl lg:text-4xl font-black italic select-none">e</span>
+              )}
+            </div>
+            {isActive && (
+              <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-green-500 border-4 border-white rounded-full shadow-lg"></div>
             )}
           </div>
-          <div>
-            <h2 className={`text-2xl lg:text-3xl font-black tracking-tighter uppercase ${isEmergency ? 'text-white' : 'text-[#1D1D1D]'}`}>
-               {isEmergency ? 'Emergency Dispatch' : 'Lead Dashboard'}
+          
+          <div className="space-y-1">
+            <h2 className={`text-3xl lg:text-4xl font-black tracking-tight uppercase leading-none ${isEmergency ? 'text-white' : 'text-[#1D1D1D]'}`}>
+               {isEmergency ? 'Emergency Response' : 'Reception Desk'}
             </h2>
-            <p className={`font-bold tracking-widest flex items-center gap-2 uppercase text-[10px] lg:text-xs ${isEmergency ? 'text-white/80' : 'text-[#E31937]'}`}>
-               <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500 animate-ping' : 'bg-slate-300'}`}></span>
-               Active Agent: {isEmergency ? 'Mike (Emergency Specialist)' : (data.activeAgent || 'Angela')}
-            </p>
+            <div className="flex items-center gap-3">
+              <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border ${
+                isEmergency ? 'bg-white/10 border-white/20 text-white' : 'bg-slate-100 border-slate-200 text-slate-500'
+              }`}>
+                Agent: {isEmergency ? 'Mike' : 'Angela'}
+              </span>
+              <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></span>
+              <span className={`text-[10px] font-bold uppercase tracking-widest ${isEmergency ? 'text-white/60' : 'text-slate-400'}`}>
+                {isActive ? 'Live Interaction' : 'Standby Mode'}
+              </span>
+            </div>
           </div>
         </div>
         
-        {isEmergency && (
-          <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20 text-center">
-             <p className="text-[8px] lg:text-[10px] uppercase font-black text-white/60 mb-1">Guaranteed Response</p>
-             <p className="text-2xl lg:text-3xl font-black text-white">4 HOURS</p>
-          </div>
-        )}
+        <div className="flex flex-col items-center md:items-end gap-2 relative z-10">
+           <div className="flex items-center gap-2 mb-1">
+              <span className={`text-[10px] font-black uppercase tracking-widest ${isEmergency ? 'text-white/40' : 'text-slate-400'}`}>Lead Completion</span>
+              <span className={`text-xs font-black ${isEmergency ? 'text-white' : 'text-[#E31937]'}`}>{completionPercent}%</span>
+           </div>
+           <div className={`w-48 h-2 rounded-full overflow-hidden ${isEmergency ? 'bg-white/10' : 'bg-slate-100'}`}>
+              <div 
+                className={`h-full transition-all duration-1000 ease-out rounded-full ${isEmergency ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'bg-[#E31937] shadow-[0_0_10px_rgba(227,25,55,0.3)]'}`}
+                style={{ width: `${completionPercent}%` }}
+              ></div>
+           </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Data Column */}
-        <div className="lg:col-span-2 space-y-6">
-          <section className="bg-white border border-slate-100 p-8 lg:p-10 rounded-[2.5rem] shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between mb-8 lg:mb-10">
-               <h3 className="text-lg lg:text-xl font-black text-[#1D1D1D] uppercase tracking-tight flex items-center gap-3">
-                 Inquiry Details
-               </h3>
+        <div className="lg:col-span-2 space-y-8">
+          <section className="bg-white border border-slate-100 p-8 lg:p-12 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.02)] relative overflow-hidden group">
+            {/* Corner Accent */}
+            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+               <svg className="w-8 h-8 text-slate-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+               </svg>
+            </div>
+
+            <div className="flex items-center justify-between mb-12">
+               <div className="space-y-1">
+                 <h3 className="text-xl font-black text-[#1D1D1D] uppercase tracking-tighter flex items-center gap-4">
+                   Capture Stream
+                   <span className="w-2 h-2 bg-slate-200 rounded-full"></span>
+                 </h3>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Real-time caller data extraction</p>
+               </div>
                {data.isHotInstall && (
-                 <div className="px-4 py-1.5 bg-[#E31937] text-white text-[9px] font-black rounded-full uppercase tracking-tighter shadow-md animate-bounce">
-                   Emergency Heat Replacement
+                 <div className="px-5 py-2 bg-[#E31937] text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-[0_8px_20px_rgba(227,25,55,0.4)] animate-pulse flex items-center gap-2">
+                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.99 7.99 0 0120 13a7.99 7.99 0 01-2.343 5.657z" />
+                   </svg>
+                   Hot Install
                  </div>
                )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 lg:gap-y-10">
-              <DetailItem label="Caller Name" value={data.name} />
-              <DetailItem label="Contact Phone" value={data.phone} isHighlighted={!!data.phone} />
-              <DetailItem label="Service Address" value={data.address} />
-              <DetailItem label="System Profile" value={data.heatingType} />
-              <DetailItem label="Unit Lifespan" value={data.unitAge ? `${data.unitAge} years old` : ''} />
-              <DetailItem label="Interaction Summary" value={data.problemSummary} isFullWidth />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+              <DetailItem 
+                label="Caller Identity" 
+                value={data.name} 
+                icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />}
+              />
+              <DetailItem 
+                label="Verified Contact" 
+                value={data.phone} 
+                isHighlighted={!!data.phone} 
+                icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />}
+              />
+              <DetailItem 
+                label="Service Locality" 
+                value={data.address} 
+                icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />}
+              />
+              <DetailItem 
+                label="System Architecture" 
+                value={data.heatingType} 
+                icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.673.337a4 4 0 01-1.909.48H4.707a.5.5 0 01-.39-.812l.002-.003 1.183-1.481a12.078 12.078 0 012.512-2.352l1.638-1.124a8.04 8.04 0 014.256-1.39h2.122a2 2 0 011.916 1.419l1.411 4.444a2 2 0 01-.351 1.768z" />}
+              />
+              <DetailItem 
+                label="Unit Longevity" 
+                value={data.unitAge ? `${data.unitAge} Years` : ''} 
+                icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />}
+              />
+              <DetailItem 
+                label="Issue Synthesis" 
+                value={data.problemSummary} 
+                isFullWidth 
+                icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />}
+              />
             </div>
           </section>
 
-          {/* Banner Styled as Enercare Promo */}
-          <section className="bg-[#1D1D1D] p-8 lg:p-10 rounded-[2.5rem] shadow-2xl text-white flex flex-col md:flex-row items-center justify-between gap-6 lg:gap-8 relative overflow-hidden group">
-             <div className="absolute top-0 right-0 w-64 h-64 bg-[#E31937] opacity-20 blur-[100px] -translate-y-32 translate-x-32"></div>
-             <div className="relative z-10 text-center md:text-left">
-                <h3 className="text-2xl lg:text-3xl font-black mb-1 lg:mb-2 uppercase leading-none tracking-tighter">Enercare Advantage</h3>
-                <p className="text-slate-400 text-xs lg:text-sm font-medium max-w-sm">Book your home comfort consultation today and save up to $7,500.</p>
+          {/* High-Impact Promo Banner */}
+          <section className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] p-10 lg:p-12 rounded-[3rem] shadow-2xl text-white flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group">
+             {/* Glowing Brand Mark Background */}
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#E31937] opacity-[0.03] blur-[100px] rounded-full pointer-events-none group-hover:opacity-[0.05] transition-opacity duration-1000"></div>
+             
+             <div className="relative z-10 text-center md:text-left space-y-3">
+                <div className="flex items-center gap-3 justify-center md:justify-start">
+                   <div className="w-8 h-8 bg-[#E31937] rounded-lg flex items-center justify-center rotate-6">
+                      <span className="text-white font-black italic text-sm">e</span>
+                   </div>
+                   <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#E31937]">Enercare Priority</span>
+                </div>
+                <h3 className="text-3xl lg:text-4xl font-black mb-2 uppercase leading-[0.9] tracking-tighter">The Advantage <br/><span className="text-slate-500">Upgrade</span></h3>
+                <p className="text-slate-400 text-sm font-medium max-w-sm leading-relaxed">Schedule your home comfort assessment and unlock exclusive multi-measure rebates up to <span className="text-white font-bold">$7,700</span>.</p>
              </div>
+             
              <a 
               href={BOOKING_URL} 
               target="_blank" 
               rel="noreferrer" 
-              className="enercare-pill px-8 py-4 lg:px-10 lg:py-5 font-black hover:scale-105 shadow-2xl relative z-10 whitespace-nowrap text-sm lg:text-base"
+              className="group/btn relative px-10 py-6 font-black rounded-2xl bg-[#E31937] hover:bg-[#C1132C] transition-all duration-300 hover:scale-[1.03] active:scale-95 shadow-[0_15px_30px_rgba(227,25,55,0.3)] flex items-center gap-3 overflow-hidden"
              >
-               BOOK ASSESSMENT
+               <span className="relative z-10 uppercase tracking-widest text-sm">Book Assessment</span>
+               <svg className="w-5 h-5 relative z-10 group-hover/btn:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+               </svg>
              </a>
           </section>
         </div>
 
         {/* Sidebar Info Column */}
-        <div className="space-y-6">
-          <section className="bg-white border border-slate-100 p-6 lg:p-8 rounded-[2.5rem] shadow-sm">
-            <h3 className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-6 lg:mb-8">Rebate Qualifier Tiers</h3>
-            <div className="space-y-3 lg:space-y-4">
+        <div className="space-y-8">
+          {/* Rebate Section with Glassmorphism */}
+          <section className="bg-white border border-slate-100 p-8 rounded-[3rem] shadow-[0_20px_40px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center justify-between mb-10">
+               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Incentives</h3>
+               <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center">
+                 <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                 </svg>
+               </div>
+            </div>
+            
+            <div className="space-y-4">
               <ProgramTier 
-                label="Electric Conversion" 
+                label="Heat Pump" 
                 rebate={HRS_PROGRAM_DETAILS.electricRebate} 
-                isActive={normalizedHeating.includes('electric')}
+                isActive={normalizedHeating.includes('electric') || normalizedHeating.includes('pump')}
               />
               <ProgramTier 
-                label="Natural Gas Upgrade" 
+                label="Natural Gas" 
                 rebate={HRS_PROGRAM_DETAILS.gasRebate} 
                 isActive={normalizedHeating.includes('gas')}
               />
               <ProgramTier 
-                label="Oil/Propane Switch" 
+                label="Off-Grid Switch" 
                 rebate={HRS_PROGRAM_DETAILS.oilPropaneRebate} 
                 isActive={normalizedHeating.includes('oil') || normalizedHeating.includes('propane')}
               />
-              <div className="mt-6 pt-6 border-t border-slate-50 space-y-3 lg:space-y-4">
-                 <div className="flex justify-between items-center px-2">
-                    <span className="text-[10px] lg:text-[11px] font-black text-slate-400 uppercase tracking-widest">Attic Rebate</span>
+              
+              <div className="mt-10 pt-8 border-t border-slate-100 space-y-5">
+                 <div className="flex justify-between items-center group/item">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest group-hover/item:text-slate-600 transition-colors">Attic Rebate</span>
                     <span className="text-sm font-black text-[#1D1D1D]">{HRS_PROGRAM_DETAILS.atticRebate}</span>
                  </div>
-                 <div className="flex justify-between items-center px-2">
-                    <span className="text-[10px] lg:text-[11px] font-black text-slate-400 uppercase tracking-widest">Energy Audit</span>
-                    <span className="text-sm font-black text-green-600">{HRS_PROGRAM_DETAILS.assessmentReimbursement} Credit</span>
+                 <div className="flex justify-between items-center group/item">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest group-hover/item:text-slate-600 transition-colors">Audit Credit</span>
+                    <span className="px-3 py-1 bg-green-50 text-[10px] font-black text-green-600 rounded-lg">{HRS_PROGRAM_DETAILS.assessmentReimbursement}</span>
                  </div>
               </div>
             </div>
           </section>
 
-          <section className="bg-slate-100/50 border border-slate-200 p-6 lg:p-8 rounded-[2.5rem]">
-             <h3 className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 lg:mb-6">Internal System Log</h3>
-             <div className="space-y-3 lg:space-y-4">
-                <LogEntry time="LIVE" text="Listening for key identifiers..." active />
-                {data.name && <LogEntry time="LEAD" text={`Logged: ${data.name.split(' ')[0]}`} color="text-[#E31937]" />}
-                {isEmergency && <LogEntry time="ALERT" text="Emergency: Mike Engaged" urgent />}
+          {/* System Log Section */}
+          <section className="bg-[#1A1A1A] border border-slate-800 p-8 rounded-[3rem] shadow-xl">
+             <div className="flex items-center gap-3 mb-8">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">System Pulse</h3>
+             </div>
+             <div className="space-y-5">
+                <LogEntry time="LIVE" text="Awaiting voice stream..." active />
+                {data.name && <LogEntry time="PUSH" text={`Verified: ${data.name.split(' ')[0]}`} color="text-[#E31937]" />}
+                {isEmergency && <LogEntry time="WARN" text="Mike: Dispatch Protocol" urgent />}
+                {completionPercent > 50 && <LogEntry time="SYNC" text="CRM Sync: In Progress" color="text-green-500" />}
              </div>
           </section>
         </div>
@@ -138,34 +235,69 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
   );
 };
 
-const DetailItem = ({ label, value, isHighlighted = false, isFullWidth = false }: { label: string, value: string, isHighlighted?: boolean, isFullWidth?: boolean }) => (
-  <div className={`${isFullWidth ? 'md:col-span-2' : ''}`}>
-    <p className="text-[9px] lg:text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-2 lg:mb-3">{label}</p>
-    <div className={`text-sm lg:text-base font-bold px-0 py-1 transition-all flex items-center border-b-2 ${
-      value 
-        ? isHighlighted 
-          ? 'border-[#E31937] text-[#E31937]' 
-          : 'border-slate-800 text-[#1D1D1D]' 
-        : 'border-slate-100 text-slate-300 font-medium italic'
-    }`}>
-      {value || `Waiting for input...`}
+const DetailItem = ({ label, value, icon, isHighlighted = false, isFullWidth = false }: { label: string, value: string, icon: React.ReactNode, isHighlighted?: boolean, isFullWidth?: boolean }) => (
+  <div className={`group/detail ${isFullWidth ? 'md:col-span-2' : ''} space-y-3`}>
+    <div className="flex items-center gap-3">
+       <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 ${
+         value ? 'bg-slate-800 text-white rotate-6' : 'bg-slate-50 text-slate-300 group-hover/detail:bg-slate-100'
+       }`}>
+         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+           {icon}
+         </svg>
+       </div>
+       <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">{label}</p>
+    </div>
+    
+    <div className={`relative transition-all duration-500`}>
+      <div className={`text-base lg:text-lg font-bold py-2 border-b-2 transition-all duration-500 flex items-center ${
+        value 
+          ? isHighlighted 
+            ? 'border-[#E31937] text-[#E31937] translate-x-1' 
+            : 'border-slate-800 text-[#1D1D1D]' 
+          : 'border-slate-100 text-slate-200 font-medium italic'
+      }`}>
+        {value || `Waiting for input...`}
+      </div>
+      {/* Subtle pulse for empty fields when active */}
+      {!value && (
+        <div className="absolute inset-x-0 -bottom-[2px] h-[2px] bg-[#E31937]/5 animate-pulse rounded-full"></div>
+      )}
     </div>
   </div>
 );
 
 const ProgramTier = ({ label, rebate, isActive }: { label: string, rebate: string, isActive: boolean }) => (
-  <div className={`p-4 lg:p-5 rounded-3xl border transition-all duration-500 ${isActive ? 'bg-[#E31937] border-[#E31937] text-white shadow-lg -translate-y-1' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
-    <div className="flex justify-between items-center">
-      <span className={`text-[10px] lg:text-[11px] font-black uppercase tracking-tight ${isActive ? 'text-white/80' : 'text-slate-500'}`}>{label}</span>
-      <span className={`text-xl lg:text-2xl font-black ${isActive ? 'text-white' : 'text-[#1D1D1D]'}`}>{rebate}</span>
+  <div className={`p-6 rounded-[1.75rem] border transition-all duration-700 relative overflow-hidden group/tier ${
+    isActive 
+      ? 'bg-[#E31937] border-[#E31937] text-white shadow-[0_15px_30px_rgba(227,25,55,0.3)] -translate-y-1' 
+      : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm'
+  }`}>
+    {isActive && (
+      <div className="absolute top-0 right-0 p-3">
+         <svg className="w-5 h-5 text-white/40" fill="currentColor" viewBox="0 0 20 20">
+           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+         </svg>
+      </div>
+    )}
+    <div className="flex flex-col gap-1 relative z-10">
+      <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-white/70' : 'text-slate-400'}`}>{label}</span>
+      <span className={`text-2xl font-black tracking-tighter ${isActive ? 'text-white' : 'text-[#1D1D1D]'}`}>{rebate}</span>
     </div>
   </div>
 );
 
 const LogEntry = ({ time, text, active = false, urgent = false, color }: { time: string, text: string, active?: boolean, urgent?: boolean, color?: string }) => (
-  <div className="flex gap-4 text-[10px] lg:text-[11px] items-start">
-    <span className={`font-black tracking-tighter w-12 flex-shrink-0 ${urgent ? 'text-[#E31937]' : 'text-slate-400'}`}>{time}</span>
-    <span className={`font-bold ${active ? 'text-blue-600' : urgent ? 'text-[#E31937] animate-pulse' : color || 'text-slate-500'}`}>{text}</span>
+  <div className="flex gap-4 text-[10px] font-mono items-center">
+    <span className={`font-black tracking-tighter px-1.5 py-0.5 rounded border ${
+      urgent 
+        ? 'text-[#E31937] border-[#E31937]/30 bg-[#E31937]/10' 
+        : 'text-slate-500 border-slate-800 bg-white/5'
+    }`}>{time}</span>
+    <span className={`font-bold transition-all truncate ${
+      active ? 'text-blue-400' : urgent ? 'text-[#E31937] animate-pulse' : color || 'text-slate-400'
+    }`}>
+      {text}
+    </span>
   </div>
 );
 
