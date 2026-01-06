@@ -310,7 +310,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       {/* Enhanced Conversation Log */}
       <div 
         ref={scrollRef}
-        className="flex-grow overflow-y-auto space-y-5 mb-4 custom-scrollbar pr-2 scroll-smooth"
+        className="flex-grow overflow-y-auto space-y-6 mb-4 custom-scrollbar pr-2 scroll-smooth"
       >
         {transcription.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-6">
@@ -330,6 +330,8 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
         ) : (
           transcription.map((entry, i) => {
             const isUser = entry.role === 'user';
+            const isLastMessage = i === transcription.length - 1;
+            const isModelSpeaking = !isUser && isLastMessage && currentOutputTranscriptionRef.current.length > 0;
             const isMike = entry.persona === Persona.MIKE || (!isUser && activePersona === Persona.MIKE);
             
             // Check for Gas Safety Protocol Keywords
@@ -342,33 +344,50 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
             );
             
             return (
-              <div key={i} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} group animate-in slide-in-from-bottom-2 duration-300`}>
-                <div className={`flex items-center gap-2 mb-1 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <span className={`text-[9px] font-black uppercase tracking-widest ${
+              <div key={i} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} group animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-500`}>
+                <div className={`flex items-center gap-2 mb-1.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-300 ${
                     isUser ? 'text-[#6B7280]' : 
-                    isSafetyProtocol ? 'text-red-600 font-extrabold flex items-center gap-1' :
+                    isSafetyProtocol ? 'text-red-600 font-extrabold flex items-center gap-1.5' :
                     isMike ? 'text-slate-900' : 'text-[#E31937]'
                   }`}>
                     {isSafetyProtocol && (
-                      <svg className="w-2.5 h-2.5 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
+                      <span className="flex h-2.5 w-2.5 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                      </span>
                     )}
                     {isUser ? 'Caller' : isMike ? (isSafetyProtocol ? 'MIKE - SAFETY ALERT' : 'Mike (Emergency)') : 'Angela (Enercare)'}
                   </span>
+                  
+                  {isModelSpeaking && (
+                    <div className="flex gap-0.5 items-center ml-1">
+                      <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-1 h-1 bg-current rounded-full animate-bounce"></div>
+                    </div>
+                  )}
                 </div>
+                
                 <div 
-                  className={`relative max-w-[90%] px-4 py-3 rounded-[1.25rem] text-[12px] font-medium leading-[1.6] shadow-md transition-all ${
+                  className={`relative max-w-[90%] px-5 py-4 rounded-[1.5rem] text-[12.5px] font-medium leading-[1.6] shadow-md transition-all duration-500 ${
                     isUser 
                       ? 'bg-white border border-[#E9EBEE] text-[#1A1A1A] rounded-tr-none' 
                       : isSafetyProtocol
-                        ? 'bg-red-700 text-white border-2 border-amber-400 rounded-tl-none shadow-[0_0_15px_rgba(185,28,28,0.3)] animate-in zoom-in-95 duration-500 uppercase tracking-tight'
+                        ? 'bg-red-700 text-white border-4 border-amber-400 rounded-tl-none shadow-[0_0_20px_rgba(185,28,28,0.4)] uppercase tracking-tight'
                         : isMike 
-                          ? 'bg-slate-900 text-white rounded-tl-none shadow-xl' 
-                          : 'bg-[#E31937] text-white rounded-tl-none'
+                          ? `bg-slate-900 text-white rounded-tl-none shadow-xl ${isLastMessage ? 'ring-2 ring-slate-400/50 animate-pulse' : ''}` 
+                          : `bg-[#E31937] text-white rounded-tl-none ${isLastMessage ? 'ring-2 ring-red-400/50 animate-pulse' : ''}`
                   }`}
                 >
-                  {isSafetyProtocol && <div className="text-[9px] font-black mb-1 opacity-80 border-b border-white/20 pb-1">IMMEDIATE ACTION</div>}
+                  {isSafetyProtocol && (
+                    <div className="text-[10px] font-black mb-1 opacity-90 border-b border-white/20 pb-1.5 mb-2 flex items-center justify-between">
+                      <span>CRITICAL SAFETY ACTION</span>
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
                   {entry.text}
                 </div>
               </div>
@@ -382,21 +401,21 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
         <button
           onClick={isSessionActive ? stopSession : startSession}
           disabled={isConnecting}
-          className={`w-full py-5 rounded-[1.5rem] font-black text-[10px] lg:text-[11px] uppercase tracking-[0.3em] transition-all duration-300 shadow-xl flex items-center justify-center gap-3 active:scale-[0.97] ${
+          className={`w-full py-5 rounded-[1.75rem] font-black text-[10px] lg:text-[11px] uppercase tracking-[0.3em] transition-all duration-300 shadow-xl flex items-center justify-center gap-3 active:scale-[0.97] border-2 ${
             isSessionActive 
-              ? 'bg-white border-2 border-[#E31937] text-[#E31937] hover:bg-slate-50' 
-              : 'bg-[#E31937] text-white hover:bg-[#C1132C]'
+              ? 'bg-white border-[#E31937] text-[#E31937] hover:bg-slate-50' 
+              : 'bg-[#E31937] border-[#E31937] text-white hover:bg-[#C1132C] hover:border-[#C1132C]'
           } ${isConnecting ? 'opacity-70 cursor-wait' : ''}`}
         >
           {isConnecting ? (
             <span className="flex items-center gap-2">
               <div className="w-3.5 h-3.5 border-2 border-slate-200 border-t-[#E31937] rounded-full animate-spin"></div>
-              Connecting...
+              Linking Dispatch...
             </span>
           ) : isSessionActive ? (
             <>
               <div className="w-1.5 h-1.5 bg-[#E31937] rounded-full animate-ping"></div>
-              End Line
+              Close Priority Line
             </>
           ) : (
             <>
