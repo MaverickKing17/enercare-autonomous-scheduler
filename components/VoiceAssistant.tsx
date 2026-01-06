@@ -306,25 +306,25 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Enhanced Conversation Log */}
       <div 
         ref={scrollRef}
-        className="flex-grow overflow-y-auto space-y-6 mb-6 custom-scrollbar pr-3 scroll-smooth"
+        className="flex-grow overflow-y-auto space-y-5 mb-4 custom-scrollbar pr-2 scroll-smooth"
       >
         {transcription.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-6">
             <div className="relative">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 shadow-inner">
-                 <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 shadow-inner">
+                 <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                  </svg>
               </div>
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-white rounded-full"></div>
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-800">Priority Line Open</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Awaiting Caller Input</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Priority Line Open</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Awaiting Caller Input</p>
             </div>
           </div>
         ) : (
@@ -332,25 +332,43 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
             const isUser = entry.role === 'user';
             const isMike = entry.persona === Persona.MIKE || (!isUser && activePersona === Persona.MIKE);
             
+            // Check for Gas Safety Protocol Keywords
+            const textLower = entry.text.toLowerCase();
+            const isSafetyProtocol = isMike && (
+              textLower.includes('911') || 
+              textLower.includes('leave the house') || 
+              textLower.includes('hang up') ||
+              textLower.includes('safe distance')
+            );
+            
             return (
               <div key={i} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} group animate-in slide-in-from-bottom-2 duration-300`}>
-                <div className={`flex items-center gap-2 mb-1.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${isUser ? 'text-[#6B7280]' : isMike ? 'text-slate-900' : 'text-[#E31937]'}`}>
-                    {isUser ? 'Caller' : isMike ? 'Mike (Emergency)' : 'Angela (Enercare)'}
+                <div className={`flex items-center gap-2 mb-1 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-widest ${
+                    isUser ? 'text-[#6B7280]' : 
+                    isSafetyProtocol ? 'text-red-600 font-extrabold flex items-center gap-1' :
+                    isMike ? 'text-slate-900' : 'text-[#E31937]'
+                  }`}>
+                    {isSafetyProtocol && (
+                      <svg className="w-2.5 h-2.5 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {isUser ? 'Caller' : isMike ? (isSafetyProtocol ? 'MIKE - SAFETY ALERT' : 'Mike (Emergency)') : 'Angela (Enercare)'}
                   </span>
-                  {!isUser && (
-                    <span className={`w-1.5 h-1.5 rounded-full ${isSessionActive ? 'bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]' : 'bg-slate-300'}`}></span>
-                  )}
                 </div>
                 <div 
-                  className={`relative max-w-[88%] px-5 py-4 rounded-[1.5rem] text-[13px] font-medium leading-[1.6] shadow-md transition-all ${
+                  className={`relative max-w-[90%] px-4 py-3 rounded-[1.25rem] text-[12px] font-medium leading-[1.6] shadow-md transition-all ${
                     isUser 
                       ? 'bg-white border border-[#E9EBEE] text-[#1A1A1A] rounded-tr-none' 
-                      : isMike 
-                        ? 'bg-slate-900 text-white rounded-tl-none shadow-xl' 
-                        : 'bg-[#E31937] text-white rounded-tl-none'
+                      : isSafetyProtocol
+                        ? 'bg-red-700 text-white border-2 border-amber-400 rounded-tl-none shadow-[0_0_15px_rgba(185,28,28,0.3)] animate-in zoom-in-95 duration-500 uppercase tracking-tight'
+                        : isMike 
+                          ? 'bg-slate-900 text-white rounded-tl-none shadow-xl' 
+                          : 'bg-[#E31937] text-white rounded-tl-none'
                   }`}
                 >
+                  {isSafetyProtocol && <div className="text-[9px] font-black mb-1 opacity-80 border-b border-white/20 pb-1">IMMEDIATE ACTION</div>}
                   {entry.text}
                 </div>
               </div>
@@ -360,29 +378,29 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       </div>
 
       {/* Control Button */}
-      <div className="pt-2">
+      <div className="flex-shrink-0 pt-2 pb-1">
         <button
           onClick={isSessionActive ? stopSession : startSession}
           disabled={isConnecting}
-          className={`w-full py-6 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.3em] transition-all duration-300 shadow-xl flex items-center justify-center gap-3 active:scale-[0.97] ${
+          className={`w-full py-5 rounded-[1.5rem] font-black text-[10px] lg:text-[11px] uppercase tracking-[0.3em] transition-all duration-300 shadow-xl flex items-center justify-center gap-3 active:scale-[0.97] ${
             isSessionActive 
               ? 'bg-white border-2 border-[#E31937] text-[#E31937] hover:bg-slate-50' 
-              : 'bg-[#E31937] text-white hover:bg-[#C1132C] hover:shadow-[0_12px_30px_rgba(227,25,55,0.3)]'
+              : 'bg-[#E31937] text-white hover:bg-[#C1132C]'
           } ${isConnecting ? 'opacity-70 cursor-wait' : ''}`}
         >
           {isConnecting ? (
-            <span className="flex items-center gap-3">
-              <div className="w-4 h-4 border-2 border-slate-200 border-t-[#E31937] rounded-full animate-spin"></div>
-              Linking Dispatch...
+            <span className="flex items-center gap-2">
+              <div className="w-3.5 h-3.5 border-2 border-slate-200 border-t-[#E31937] rounded-full animate-spin"></div>
+              Connecting...
             </span>
           ) : isSessionActive ? (
             <>
-              <div className="w-2 h-2 bg-[#E31937] rounded-full animate-ping"></div>
-              Disconnect Line
+              <div className="w-1.5 h-1.5 bg-[#E31937] rounded-full animate-ping"></div>
+              End Line
             </>
           ) : (
             <>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
               Open Priority Line
