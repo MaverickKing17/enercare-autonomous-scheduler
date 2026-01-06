@@ -1,8 +1,49 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { GoogleGenAI, Modality, Type, LiveServerMessage } from '@google/genai';
 import { Persona, TranscriptionEntry, CustomerData } from '../types';
 import { SYSTEM_INSTRUCTION, WEBHOOK_URL } from '../constants';
+
+// Manual implementation of base64 decoding as per guidelines
+function decode(base64: string) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+// Manual implementation of base64 encoding as per guidelines
+function encode(bytes: Uint8Array) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// Audio data decoder for raw PCM as per guidelines
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
 
 interface VoiceAssistantProps {
   onUpdateLead: (data: Partial<CustomerData>) => void;
@@ -19,213 +60,267 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
 }) => {
   const [transcription, setTranscription] = useState<TranscriptionEntry[]>([]);
   const [activePersona, setActivePersona] = useState<Persona>(Persona.CHLOE);
+  const [isConnecting, setIsConnecting] = useState(false);
   
   const audioContextRef = useRef<AudioContext | null>(null);
-  const sessionRef = useRef<any>(null);
+  const outputAudioContextRef = useRef<AudioContext | null>(null);
+  const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+  const streamRef = useRef<MediaStream | null>(null);
 
-  const submitLead = async (args: any) => {
-    onUpdateLead({
-      name: args.name,
-      phone: args.phone,
-      unitAge: args.age,
-      problemSummary: args.summary,
-      isHotInstall: args.temp === 'HOT INSTALL',
-      activeAgent: args.agent
-    });
-    try {
-      await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(args)
-      });
-    } catch (e) { console.error(e); }
-    return { status: "success" };
-  };
-
-  const setEmergency = (args: { active: boolean }) => {
-    onSetEmergency(args.active);
-    setActivePersona(args.active ? Persona.SAM : Persona.CHLOE);
-    return { status: "ok" };
-  };
-
-  const toggleSession = async () => {
-    if (isSessionActive) {
-      sessionRef.current?.close();
-      onSessionChange(false);
-      return;
+  // Tools configuration
+  const setEmergencyStatusTool = {
+    name: 'set_emergency_status',
+    parameters: {
+      type: Type.OBJECT,
+      description: 'Mark the current call as an emergency and switch to Sam.',
+      properties: {
+        active: { type: Type.BOOLEAN, description: 'True if it is an emergency.' }
+      },
+      required: ['active']
     }
+  };
+
+  const submitLeadTool = {
+    name: 'submit_lead',
+    parameters: {
+      type: Type.OBJECT,
+      description: 'Submit customer lead data to the backend.',
+      properties: {
+        name: { type: Type.STRING, description: 'Customer full name' },
+        phone: { type: Type.STRING, description: 'Customer phone number' },
+        heatingType: { type: Type.STRING, description: 'Current heating source' },
+        age: { type: Type.STRING, description: 'Age of the current unit' },
+        summary: { type: Type.STRING, description: 'Brief summary of the issue' },
+        temp: { type: Type.STRING, description: 'Status tag, e.g., "HOT INSTALL"' }
+      }
+    }
+  };
+
+  const cleanupSession = useCallback(() => {
+    if (sourcesRef.current) {
+      sourcesRef.current.forEach(s => {
+        try { s.stop(); } catch (e) {}
+      });
+      sourcesRef.current.clear();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    nextStartTimeRef.current = 0;
+    onSessionChange(false);
+    setIsConnecting(false);
+    sessionPromiseRef.current = null;
+  }, [onSessionChange]);
+
+  const handleToolCall = useCallback(async (fc: any) => {
+    if (fc.name === 'set_emergency_status') {
+      onSetEmergency(fc.args.active);
+      setActivePersona(fc.args.active ? Persona.SAM : Persona.CHLOE);
+      return { status: 'success', message: `Emergency status set to ${fc.args.active}` };
+    }
+    if (fc.name === 'submit_lead') {
+      onUpdateLead({
+        name: fc.args.name,
+        phone: fc.args.phone,
+        heatingType: fc.args.heatingType,
+        unitAge: fc.args.age,
+        problemSummary: fc.args.summary,
+        isHotInstall: fc.args.temp === 'HOT INSTALL'
+      });
+      try {
+        await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fc.args)
+        });
+      } catch (e) {
+        console.error('Webhook failed', e);
+      }
+      return { status: 'success', message: 'Lead submitted successfully' };
+    }
+    return { status: 'error', message: 'Unknown tool' };
+  }, [onSetEmergency, onUpdateLead]);
+
+  const startSession = async () => {
+    if (isConnecting || isSessionActive) return;
+    setIsConnecting(true);
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      audioContextRef.current = audioContext;
+      outputAudioContextRef.current = outputAudioContext;
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      audioContextRef.current = outputCtx;
+      streamRef.current = stream;
 
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: activePersona === Persona.CHLOE ? 'Kore' : 'Zephyr' } },
-          },
-          systemInstruction: SYSTEM_INSTRUCTION,
-          tools: [{
-            functionDeclarations: [
-              {
-                name: 'submit_lead',
-                description: 'Capture Enercare lead data.',
-                parameters: {
-                  type: Type.OBJECT,
-                  properties: {
-                    name: { type: Type.STRING },
-                    phone: { type: Type.STRING },
-                    age: { type: Type.STRING },
-                    summary: { type: Type.STRING },
-                    temp: { type: Type.STRING, enum: ['HOT INSTALL', 'REPAIR'] },
-                    agent: { type: Type.STRING }
-                  },
-                  required: ['name', 'phone']
-                }
-              },
-              {
-                name: 'set_emergency_status',
-                description: 'Flag emergency.',
-                parameters: {
-                  type: Type.OBJECT,
-                  properties: { active: { type: Type.BOOLEAN } },
-                  required: ['active']
-                }
-              }
-            ]
-          }],
-          outputAudioTranscription: {},
-          inputAudioTranscription: {}
-        },
         callbacks: {
           onopen: () => {
-            onSessionChange(true);
-            const source = inputCtx.createMediaStreamSource(stream);
-            const scriptProcessor = inputCtx.createScriptProcessor(4096, 1, 1);
+            const source = audioContext.createMediaStreamSource(stream);
+            const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+            
             scriptProcessor.onaudioprocess = (e) => {
-              const pcmBlob = createBlob(e.inputBuffer.getChannelData(0));
-              sessionPromise.then(s => s.sendRealtimeInput({ media: pcmBlob }));
-            };
-            source.connect(scriptProcessor);
-            scriptProcessor.connect(inputCtx.destination);
-          },
-          onmessage: async (msg: LiveServerMessage) => {
-            if (msg.toolCall) {
-              for (const fc of msg.toolCall.functionCalls) {
-                let res;
-                if (fc.name === 'submit_lead') res = await submitLead(fc.args);
-                if (fc.name === 'set_emergency_status') res = await setEmergency(fc.args as any);
-                sessionPromise.then(s => s.sendToolResponse({ functionResponses: { id: fc.id, name: fc.name, response: res } }));
+              const inputData = e.inputBuffer.getChannelData(0);
+              const l = inputData.length;
+              const int16 = new Int16Array(l);
+              for (let i = 0; i < l; i++) {
+                int16[i] = inputData[i] * 32768;
               }
-            }
-            if (msg.serverContent?.outputTranscription) {
-              const text = msg.serverContent.outputTranscription.text;
-              setTranscription(prev => prev[prev.length-1]?.role === 'model' ? [...prev.slice(0,-1), {...prev[prev.length-1], text: prev[prev.length-1].text + text}] : [...prev, {role: 'model', text, persona: activePersona}]);
-            }
-            if (msg.serverContent?.inputTranscription) {
-              const text = msg.serverContent.inputTranscription.text;
-              setTranscription(prev => prev[prev.length-1]?.role === 'user' ? [...prev.slice(0,-1), {...prev[prev.length-1], text: prev[prev.length-1].text + text}] : [...prev, {role: 'user', text}]);
-            }
-            const base64Audio = msg.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-            if (base64Audio) {
-              const audioBuffer = await decodeAudioData(decode(base64Audio), outputCtx, 24000, 1);
-              const source = outputCtx.createBufferSource();
-              source.buffer = audioBuffer;
-              source.connect(outputCtx.destination);
-              nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outputCtx.currentTime);
+              const pcmBlob = {
+                data: encode(new Uint8Array(int16.buffer)),
+                mimeType: 'audio/pcm;rate=16000',
+              };
+              
+              sessionPromiseRef.current?.then((session) => {
+                session.sendRealtimeInput({ media: pcmBlob });
+              });
+            };
+
+            source.connect(scriptProcessor);
+            scriptProcessor.connect(audioContext.destination);
+            onSessionChange(true);
+            setIsConnecting(false);
+          },
+          onmessage: async (message: LiveServerMessage) => {
+            // Audio output
+            const audioData = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            if (audioData && outputAudioContextRef.current) {
+              const ctx = outputAudioContextRef.current;
+              nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
+              const buffer = await decodeAudioData(decode(audioData), ctx, 24000, 1);
+              const source = ctx.createBufferSource();
+              source.buffer = buffer;
+              source.connect(ctx.destination);
               source.start(nextStartTimeRef.current);
-              nextStartTimeRef.current += audioBuffer.duration;
+              nextStartTimeRef.current += buffer.duration;
               sourcesRef.current.add(source);
+              source.onended = () => sourcesRef.current.delete(source);
             }
-            if (msg.serverContent?.interrupted) {
-              sourcesRef.current.forEach(s => s.stop());
+
+            // Interruption
+            if (message.serverContent?.interrupted) {
+              sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }
+
+            // Tool calls
+            if (message.toolCall) {
+              for (const fc of message.toolCall.functionCalls) {
+                const result = await handleToolCall(fc);
+                sessionPromiseRef.current?.then(session => {
+                  session.sendToolResponse({
+                    functionResponses: [{
+                      id: fc.id,
+                      name: fc.name,
+                      response: result
+                    }]
+                  });
+                });
+              }
+            }
+
+            // Transcription
+            if (message.serverContent?.outputTranscription) {
+              setTranscription(prev => [...prev, { role: 'model', text: message.serverContent!.outputTranscription!.text, persona: activePersona }]);
+            }
+            if (message.serverContent?.inputTranscription) {
+              setTranscription(prev => [...prev, { role: 'user', text: message.serverContent!.inputTranscription!.text }]);
+            }
           },
-          onclose: () => onSessionChange(false),
-          onerror: () => onSessionChange(false)
+          onerror: (e) => {
+            console.error('Session error:', e);
+            cleanupSession();
+          },
+          onclose: () => {
+            cleanupSession();
+          }
+        },
+        config: {
+          responseModalities: [Modality.AUDIO],
+          systemInstruction: SYSTEM_INSTRUCTION,
+          tools: [{ functionDeclarations: [setEmergencyStatusTool, submitLeadTool] }],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
+          },
+          outputAudioTranscription: {},
+          inputAudioTranscription: {}
         }
       });
-      sessionRef.current = await sessionPromise;
-    } catch (err) { onSessionChange(false); }
+
+      sessionPromiseRef.current = sessionPromise;
+    } catch (err) {
+      console.error('Failed to start session:', err);
+      cleanupSession();
+    }
+  };
+
+  const stopSession = () => {
+    sessionPromiseRef.current?.then(session => session.close());
+    cleanupSession();
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      <button 
-        onClick={toggleSession}
-        className={`enercare-button w-full py-4 text-lg font-black uppercase tracking-wider shadow-lg flex items-center justify-center gap-3 ${isSessionActive ? '!bg-slate-800' : ''}`}
-      >
-        {isSessionActive ? (
-          <><span className="w-3 h-3 bg-red-500 rounded-full animate-ping"></span> End Interaction</>
+    <div className="flex flex-col h-full">
+      <div className="flex-grow overflow-y-auto space-y-4 mb-4 custom-scrollbar pr-2">
+        {transcription.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-40">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+               <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+               </svg>
+            </div>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ready for priority dispatch</p>
+          </div>
         ) : (
-          <><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 005.505 5.505l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg> Answer Call</>
-        )}
-      </button>
-
-      <div className="flex-grow bg-slate-50 border border-slate-200 rounded-[2rem] p-5 shadow-inner overflow-hidden flex flex-col">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Interaction Log</h3>
-        <div className="flex-grow overflow-y-auto space-y-4 pr-1">
-          {transcription.map((entry, i) => (
-            <div key={i} className={`flex ${entry.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm transition-all duration-300 ${
+          transcription.map((entry, i) => (
+            <div key={i} className={`flex flex-col ${entry.role === 'user' ? 'items-end' : 'items-start'}`}>
+              <span className="text-[9px] font-black uppercase tracking-tighter text-slate-400 mb-1">
+                {entry.role === 'user' ? 'Caller' : entry.persona || 'Agent'}
+              </span>
+              <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${
                 entry.role === 'user' 
-                  ? 'bg-white border border-slate-200 text-slate-700 rounded-tr-none' 
-                  : entry.persona === Persona.SAM 
-                    ? 'bg-slate-800 text-white rounded-tl-none font-medium' 
-                    : 'bg-[#E31937] text-white rounded-tl-none font-medium'
+                  ? 'bg-white border border-slate-100 text-[#1D1D1D]' 
+                  : 'bg-[#E31937] text-white'
               }`}>
                 {entry.text}
               </div>
             </div>
-          ))}
-          {transcription.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-slate-300 py-10">
-               <svg className="w-12 h-12 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-               <p className="text-[10px] font-black uppercase tracking-widest">Awaiting Signal</p>
-            </div>
-          )}
-        </div>
+          ))
+        )}
       </div>
+
+      <button
+        onClick={isSessionActive ? stopSession : startSession}
+        disabled={isConnecting}
+        className={`w-full py-6 rounded-3xl font-black text-sm uppercase tracking-[0.2em] transition-all duration-300 shadow-xl flex items-center justify-center gap-3 ${
+          isSessionActive 
+            ? 'bg-white border-2 border-[#E31937] text-[#E31937] hover:bg-[#E31937]/5' 
+            : 'bg-[#E31937] text-white hover:scale-[1.02] active:scale-[0.98]'
+        } ${isConnecting ? 'opacity-50 cursor-not-allowed' : ''}`}
+      >
+        {isConnecting ? (
+          <span className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            Connecting...
+          </span>
+        ) : isSessionActive ? (
+          <>
+            <div className="w-2 h-2 bg-[#E31937] rounded-full animate-pulse"></div>
+            End Connection
+          </>
+        ) : (
+          'Establish Priority Line'
+        )}
+      </button>
     </div>
   );
 };
-
-// PCM Helpers
-function createBlob(data: Float32Array) {
-  const l = data.length;
-  const int16 = new Int16Array(l);
-  for (let i = 0; i < l; i++) int16[i] = data[i] * 32768;
-  return { data: encode(new Uint8Array(int16.buffer)), mimeType: 'audio/pcm;rate=16000' };
-}
-function decode(base64: string) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number) {
-  const dataInt16 = new Int16Array(data.buffer);
-  const frameCount = dataInt16.length / numChannels;
-  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-  for (let ch = 0; ch < numChannels; ch++) {
-    const channelData = buffer.getChannelData(ch);
-    for (let i = 0; i < frameCount; i++) channelData[i] = dataInt16[i * numChannels + ch] / 32768.0;
-  }
-  return buffer;
-}
-function encode(bytes: Uint8Array) {
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
-}
 
 export default VoiceAssistant;
