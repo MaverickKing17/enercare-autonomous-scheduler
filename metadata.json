@@ -1,0 +1,7 @@
+{
+  "name": "Enercare AI Receptionist",
+  "description": "A high-performance AI voice receptionist for Enercare Heating & Cooling, featuring dual-persona agents Chloe and Sam for rebate inquiries and emergency dispatch.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
