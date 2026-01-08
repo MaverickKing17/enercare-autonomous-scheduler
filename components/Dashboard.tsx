@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { CustomerData } from '../types';
 import { HRS_PROGRAM_DETAILS, BOOKING_URL } from '../constants';
@@ -53,7 +52,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
               <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border ${
                 isEmergency ? 'bg-white/10 border-white/20 text-white' : 'bg-slate-100 border-slate-200 text-slate-500'
               }`}>
-                Agent: {isEmergency ? 'Mike' : 'Angela'}
+                Agent: {isEmergency ? 'Mike' : 'Mia'}
               </span>
               <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`}></span>
               <span className={`text-[10px] font-bold uppercase tracking-widest ${isEmergency ? 'text-white/60' : 'text-slate-400'}`}>

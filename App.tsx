@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import VoiceAssistant from './components/VoiceAssistant';
 import Dashboard from './components/Dashboard';
@@ -14,7 +13,7 @@ const App: React.FC = () => {
     unitAge: '',
     problemSummary: '',
     isHotInstall: false,
-    activeAgent: 'Angela'
+    activeAgent: 'Mia'
   });
   const [emergencyActive, setEmergencyActive] = useState(false);
 
@@ -27,7 +26,7 @@ const App: React.FC = () => {
     if (active) {
       setCustomerData(prev => ({ ...prev, activeAgent: 'Mike' }));
     } else {
-      setCustomerData(prev => ({ ...prev, activeAgent: 'Angela' }));
+      setCustomerData(prev => ({ ...prev, activeAgent: 'Mia' }));
     }
   }, []);
 

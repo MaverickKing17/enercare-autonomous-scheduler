@@ -5,11 +5,10 @@ import { WEBHOOK_URL } from '../constants';
 
 // Vapi Credentials
 const VAPI_PUBLIC_KEY = '0b4a6b67-3152-40bb-b29e-8272cfd98b3a';
-// IMPORTANT: Replace this with your Assistant ID from the Vapi Dashboard
-const VAPI_ASSISTANT_ID = 'REPLACE_WITH_YOUR_ASSISTANT_ID';
+const VAPI_ASSISTANT_ID = '67ceff6e-56e4-469f-8b04-851ef00dc479';
 
 const AVATARS = {
-  [Persona.ANGELA]: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=100&h=100',
+  [Persona.MIA]: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=100&h=100',
   [Persona.MIKE]: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=100&h=100'
 };
 
@@ -27,7 +26,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
   onSessionChange 
 }) => {
   const [transcription, setTranscription] = useState<TranscriptionEntry[]>([]);
-  const [activePersona, setActivePersona] = useState<Persona>(Persona.ANGELA);
+  const [activePersona, setActivePersona] = useState<Persona>(Persona.MIA);
   const [isConnecting, setIsConnecting] = useState(false);
   const vapiRef = useRef<Vapi | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -46,7 +45,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
     vapi.on('call-end', () => {
       onSessionChange(false);
       setIsConnecting(false);
-      // We keep transcription during the call, but you might want to clear or save it
     });
 
     vapi.on('message', (message: any) => {
@@ -88,7 +86,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
           if (name === 'set_emergency_status') {
             const isEmergency = !!args.active;
             onSetEmergency(isEmergency);
-            setActivePersona(isEmergency ? Persona.MIKE : Persona.ANGELA);
+            setActivePersona(isEmergency ? Persona.MIKE : Persona.MIA);
           }
 
           if (name === 'submit_lead') {
@@ -132,10 +130,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
 
   const startSession = async () => {
     if (isConnecting || isSessionActive) return;
-    if (VAPI_ASSISTANT_ID === 'REPLACE_WITH_YOUR_ASSISTANT_ID') {
-      alert("Please configure your VAPI_ASSISTANT_ID in VoiceAssistant.tsx");
-      return;
-    }
     setIsConnecting(true);
     vapiRef.current?.start(VAPI_ASSISTANT_ID);
   };
@@ -206,7 +200,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
                       isSafetyProtocol ? 'text-red-600 font-extrabold' :
                       isMike ? 'text-slate-900' : 'text-[#E31937]'
                     }`}>
-                      {isUser ? 'Caller' : isMike ? (isSafetyProtocol ? 'MIKE - SAFETY ALERT' : 'Mike') : 'Angela'}
+                      {isUser ? 'Caller' : isMike ? (isSafetyProtocol ? 'MIKE - SAFETY ALERT' : 'Mike') : 'Mia'}
                     </span>
                   </div>
                   
