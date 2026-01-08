@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { CustomerData } from '../types';
 import { HRS_PROGRAM_DETAILS, BOOKING_URL } from '../constants';
@@ -24,11 +25,10 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
           ? 'bg-gradient-to-br from-[#1A1A1A] to-[#2D2D2D] border-slate-800 shadow-[0_30px_70px_rgba(0,0,0,0.4)]' 
           : 'bg-white border-slate-100 shadow-[0_15px_40px_rgba(0,0,0,0.03)]'
       }`}>
-        {/* Background Accent */}
         <div className={`absolute top-0 right-0 w-96 h-96 blur-[120px] opacity-10 rounded-full pointer-events-none ${isEmergency ? 'bg-[#E31937]' : 'bg-[#E31937]'}`}></div>
 
         <div className="flex items-center gap-8 relative z-10">
-          <div className={`relative group`}>
+          <div className="relative group">
             <div className={`w-16 h-16 lg:w-20 lg:h-20 rounded-[1.75rem] flex items-center justify-center transition-all duration-500 shadow-2xl ${
               isEmergency ? 'bg-[#E31937] text-white rotate-3 scale-110' : 'bg-[#E31937] text-white -rotate-3'
             }`}>
@@ -78,16 +78,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Data Column */}
         <div className="lg:col-span-2 space-y-8">
           <section className="bg-white border border-slate-100 p-8 lg:p-12 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.02)] relative overflow-hidden group">
-            {/* Corner Accent */}
-            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-               <svg className="w-8 h-8 text-slate-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-               </svg>
-            </div>
-
             <div className="flex items-center justify-between mb-12">
                <div className="space-y-1">
                  <h3 className="text-xl font-black text-[#1D1D1D] uppercase tracking-tighter flex items-center gap-4">
@@ -96,14 +88,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
                  </h3>
                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Real-time caller data extraction</p>
                </div>
-               {data.isHotInstall && (
-                 <div className="px-5 py-2 bg-[#E31937] text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-[0_8px_20px_rgba(227,25,55,0.4)] animate-pulse flex items-center gap-2">
-                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.99 7.99 0 0120 13a7.99 7.99 0 01-2.343 5.657z" />
-                   </svg>
-                   Hot Install
-                 </div>
-               )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
@@ -121,7 +105,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
               <DetailItem 
                 label="Service Locality" 
                 value={data.address} 
-                icon={<><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></>}
+                icon={<React.Fragment><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></React.Fragment>}
               />
               <DetailItem 
                 label="System Architecture" 
@@ -142,10 +126,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
             </div>
           </section>
 
-          {/* High-Impact Promo Banner */}
           <section className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] p-10 lg:p-12 rounded-[3rem] shadow-2xl text-white flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group">
-             {/* Glowing Brand Mark Background */}
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#E31937] opacity-[0.03] blur-[100px] rounded-full pointer-events-none group-hover:opacity-[0.05] transition-opacity duration-1000"></div>
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#E31937] opacity-[0.03] blur-[100px] rounded-full pointer-events-none duration-1000"></div>
              
              <div className="relative z-10 text-center md:text-left space-y-3">
                 <div className="flex items-center gap-3 justify-center md:justify-start">
@@ -162,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
               href={BOOKING_URL} 
               target="_blank" 
               rel="noreferrer" 
-              className="group/btn relative px-10 py-6 font-black rounded-2xl bg-[#E31937] hover:bg-[#C1132C] transition-all duration-300 hover:scale-[1.03] active:scale-95 shadow-[0_15px_30px_rgba(227,25,55,0.3)] flex items-center gap-3 overflow-hidden"
+              className="group/btn relative px-10 py-6 font-black rounded-2xl bg-[#E31937] hover:bg-[#C1132C] transition-all duration-300 hover:scale-[1.03] shadow-[0_15px_30px_rgba(227,25,55,0.3)] flex items-center gap-3 overflow-hidden"
              >
                <span className="relative z-10 uppercase tracking-widest text-sm">Book Assessment</span>
                <svg className="w-5 h-5 relative z-10 group-hover/btn:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -172,9 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
           </section>
         </div>
 
-        {/* Sidebar Info Column */}
         <div className="space-y-8">
-          {/* Rebate Section with Glassmorphism */}
           <section className="bg-white border border-slate-100 p-8 rounded-[3rem] shadow-[0_20px_40px_rgba(0,0,0,0.02)]">
             <div className="flex items-center justify-between mb-10">
                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Incentives</h3>
@@ -186,36 +166,18 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
             </div>
             
             <div className="space-y-4">
-              <ProgramTier 
-                label="Heat Pump" 
-                rebate={HRS_PROGRAM_DETAILS.electricRebate} 
-                isActive={normalizedHeating.includes('electric') || normalizedHeating.includes('pump')}
-              />
-              <ProgramTier 
-                label="Natural Gas" 
-                rebate={HRS_PROGRAM_DETAILS.gasRebate} 
-                isActive={normalizedHeating.includes('gas')}
-              />
-              <ProgramTier 
-                label="Off-Grid Switch" 
-                rebate={HRS_PROGRAM_DETAILS.oilPropaneRebate} 
-                isActive={normalizedHeating.includes('oil') || normalizedHeating.includes('propane')}
-              />
-              
+              <ProgramTier label="Heat Pump" rebate={HRS_PROGRAM_DETAILS.electricRebate} isActive={normalizedHeating.includes('electric')} />
+              <ProgramTier label="Natural Gas" rebate={HRS_PROGRAM_DETAILS.gasRebate} isActive={normalizedHeating.includes('gas')} />
+              <ProgramTier label="Off-Grid" rebate={HRS_PROGRAM_DETAILS.oilPropaneRebate} isActive={normalizedHeating.includes('oil')} />
               <div className="mt-10 pt-8 border-t border-slate-100 space-y-5">
                  <div className="flex justify-between items-center group/item">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest group-hover/item:text-slate-600 transition-colors">Attic Rebate</span>
-                    <span className="text-sm font-black text-[#1D1D1D]">{HRS_PROGRAM_DETAILS.atticRebate}</span>
-                 </div>
-                 <div className="flex justify-between items-center group/item">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest group-hover/item:text-slate-600 transition-colors">Audit Credit</span>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Audit Credit</span>
                     <span className="px-3 py-1 bg-green-50 text-[10px] font-black text-green-600 rounded-lg">{HRS_PROGRAM_DETAILS.assessmentReimbursement}</span>
                  </div>
               </div>
             </div>
           </section>
 
-          {/* System Log Section */}
           <section className="bg-[#1A1A1A] border border-slate-800 p-8 rounded-[3rem] shadow-xl">
              <div className="flex items-center gap-3 mb-8">
                 <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
@@ -223,9 +185,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
              </div>
              <div className="space-y-5">
                 <LogEntry time="LIVE" text="Awaiting voice stream..." active />
-                {data.name && <LogEntry time="PUSH" text={`Verified: ${data.name.split(' ')[0]}`} color="text-[#E31937]" />}
+                {data.name && <LogEntry time="PUSH" text={`Verified: ${data.name}`} color="text-[#E31937]" />}
                 {isEmergency && <LogEntry time="WARN" text="Mike: Dispatch Protocol" urgent />}
-                {completionPercent > 50 && <LogEntry time="SYNC" text="CRM Sync: In Progress" color="text-green-500" />}
              </div>
           </section>
         </div>
@@ -238,7 +199,7 @@ const DetailItem = ({ label, value, icon, isHighlighted = false, isFullWidth = f
   <div className={`group/detail ${isFullWidth ? 'md:col-span-2' : ''} space-y-3`}>
     <div className="flex items-center gap-3">
        <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 ${
-         value ? 'bg-slate-800 text-white rotate-6' : 'bg-slate-50 text-slate-300 group-hover/detail:bg-slate-100'
+         value ? 'bg-slate-800 text-white rotate-6' : 'bg-slate-50 text-slate-300'
        }`}>
          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
            {icon}
@@ -247,7 +208,7 @@ const DetailItem = ({ label, value, icon, isHighlighted = false, isFullWidth = f
        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">{label}</p>
     </div>
     
-    <div className={`relative transition-all duration-500`}>
+    <div className="relative">
       <div className={`text-base lg:text-lg font-bold py-2 border-b-2 transition-all duration-500 flex items-center ${
         value 
           ? isHighlighted 
@@ -255,12 +216,8 @@ const DetailItem = ({ label, value, icon, isHighlighted = false, isFullWidth = f
             : 'border-slate-800 text-[#1D1D1D]' 
           : 'border-slate-100 text-slate-200 font-medium italic'
       }`}>
-        {value || `Waiting for input...`}
+        {value || 'Waiting for input...'}
       </div>
-      {/* Subtle pulse for empty fields when active */}
-      {!value && (
-        <div className="absolute inset-x-0 -bottom-[2px] h-[2px] bg-[#E31937]/5 animate-pulse rounded-full"></div>
-      )}
     </div>
   </div>
 );
@@ -269,15 +226,8 @@ const ProgramTier = ({ label, rebate, isActive }: { label: string, rebate: strin
   <div className={`p-6 rounded-[1.75rem] border transition-all duration-700 relative overflow-hidden group/tier ${
     isActive 
       ? 'bg-[#E31937] border-[#E31937] text-white shadow-[0_15px_30px_rgba(227,25,55,0.3)] -translate-y-1' 
-      : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm'
+      : 'bg-white border-slate-100'
   }`}>
-    {isActive && (
-      <div className="absolute top-0 right-0 p-3">
-         <svg className="w-5 h-5 text-white/40" fill="currentColor" viewBox="0 0 20 20">
-           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-         </svg>
-      </div>
-    )}
     <div className="flex flex-col gap-1 relative z-10">
       <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-white/70' : 'text-slate-400'}`}>{label}</span>
       <span className={`text-2xl font-black tracking-tighter ${isActive ? 'text-white' : 'text-[#1D1D1D]'}`}>{rebate}</span>
@@ -288,13 +238,9 @@ const ProgramTier = ({ label, rebate, isActive }: { label: string, rebate: strin
 const LogEntry = ({ time, text, active = false, urgent = false, color }: { time: string, text: string, active?: boolean, urgent?: boolean, color?: string }) => (
   <div className="flex gap-4 text-[10px] font-mono items-center">
     <span className={`font-black tracking-tighter px-1.5 py-0.5 rounded border ${
-      urgent 
-        ? 'text-[#E31937] border-[#E31937]/30 bg-[#E31937]/10' 
-        : 'text-slate-500 border-slate-800 bg-white/5'
+      urgent ? 'text-[#E31937] border-[#E31937]/30 bg-[#E31937]/10' : 'text-slate-500 border-slate-800 bg-white/5'
     }`}>{time}</span>
-    <span className={`font-bold transition-all truncate ${
-      active ? 'text-blue-400' : urgent ? 'text-[#E31937] animate-pulse' : color || 'text-slate-400'
-    }`}>
+    <span className={`font-bold ${active ? 'text-blue-400' : urgent ? 'text-[#E31937] animate-pulse' : color || 'text-slate-400'}`}>
       {text}
     </span>
   </div>
