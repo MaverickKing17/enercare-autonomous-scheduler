@@ -5,6 +5,7 @@ import { WEBHOOK_URL } from '../constants';
 
 // Vapi Credentials
 const VAPI_PUBLIC_KEY = '0b4a6b67-3152-40bb-b29e-8272cfd98b3a';
+// Replace with the new Mia ID when available
 const VAPI_ASSISTANT_ID = '67ceff6e-56e4-469f-8b04-851ef00dc479';
 
 const AVATARS = {
