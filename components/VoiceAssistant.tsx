@@ -8,8 +8,8 @@ const VAPI_PUBLIC_KEY = '0b4a6b67-3152-40bb-b29e-8272cfd98b3a';
 const VAPI_ASSISTANT_ID = '67ceff6e-56e4-469f-8b04-851ef00dc479';
 
 const AVATARS = {
-  [Persona.MIA]: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=100&h=100',
-  [Persona.MIKE]: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=100&h=100'
+  [Persona.MIA]: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=128&h=128',
+  [Persona.MIKE]: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=128&h=128'
 };
 
 interface VoiceAssistantProps {
@@ -34,7 +34,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
   // Initialize Vapi instance
   useEffect(() => {
     vapiRef.current = new Vapi(VAPI_PUBLIC_KEY);
-
     const vapi = vapiRef.current;
 
     vapi.on('call-start', () => {
@@ -48,19 +47,16 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
     });
 
     vapi.on('message', (message: any) => {
-      // Handle Transcripts
       if (message.type === 'transcript') {
         const role = message.role === 'assistant' ? 'model' : 'user';
         const text = message.transcript;
         
         setTranscription(prev => {
-          // If the last message is from the same role, update it (Vapi sends partials)
           if (prev.length > 0 && prev[prev.length - 1].role === role && message.transcriptType === 'partial') {
             const updated = [...prev];
             updated[updated.length - 1] = { ...updated[updated.length - 1], text };
             return updated;
           }
-          // If it's a new final transcript or the first message
           if (message.transcriptType === 'final') {
             const last = prev[prev.length - 1];
             if (last && last.role === role) {
@@ -70,7 +66,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
             }
             return [...prev, { role, text, persona: activePersona }];
           }
-          // Placeholder for initial partial
           if (prev.length === 0 || prev[prev.length - 1].role !== role) {
             return [...prev, { role, text, persona: activePersona }];
           }
@@ -78,17 +73,14 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
         });
       }
 
-      // Handle Tool Calls (Function Calls) - Match these names in your Vapi Dashboard
       if (message.type === 'tool-calls') {
         for (const toolCall of message.toolCalls) {
           const { name, args } = toolCall.function;
-
           if (name === 'set_emergency_status') {
             const isEmergency = !!args.active;
             onSetEmergency(isEmergency);
             setActivePersona(isEmergency ? Persona.MIKE : Persona.MIA);
           }
-
           if (name === 'submit_lead') {
             onUpdateLead({
               name: args.name,
@@ -98,8 +90,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
               problemSummary: args.summary,
               isHotInstall: args.temp === 'HOT INSTALL'
             });
-            
-            // Forward to Webhook
             fetch(WEBHOOK_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -116,12 +106,9 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       setIsConnecting(false);
     });
 
-    return () => {
-      vapi.stop();
-    };
+    return () => { vapi.stop(); };
   }, [onSessionChange, onSetEmergency, onUpdateLead, activePersona]);
 
-  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -134,29 +121,27 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
     vapiRef.current?.start(VAPI_ASSISTANT_ID);
   };
 
-  const stopSession = () => {
-    vapiRef.current?.stop();
-  };
+  const stopSession = () => { vapiRef.current?.stop(); };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div 
         ref={scrollRef}
-        className="flex-grow overflow-y-auto space-y-6 mb-4 custom-scrollbar pr-2 scroll-smooth"
+        className="flex-grow overflow-y-auto space-y-8 mb-6 custom-scrollbar pr-3 scroll-smooth pt-4"
       >
         {transcription.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center px-6 space-y-6">
+          <div className="flex flex-col items-center justify-center h-full text-center px-8 space-y-8 animate-in fade-in zoom-in duration-1000">
             <div className="relative">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center border border-slate-100 shadow-inner">
-                 <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center border border-slate-200 shadow-xl">
+                 <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                  </svg>
               </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
+              <div className="absolute -bottom-2 -right-2 w-7 h-7 bg-green-500 border-4 border-white rounded-full shadow-lg animate-pulse"></div>
             </div>
-            <div className="space-y-1">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">Priority Line Open</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Awaiting Caller Input</p>
+            <div className="space-y-2">
+              <p className="text-[12px] font-black uppercase tracking-[0.4em] text-slate-800">Secure Line Enabled</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Awaiting voice trigger</p>
             </div>
           </div>
         ) : (
@@ -172,47 +157,50 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
             );
             
             return (
-              <div key={i} className={`flex ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start gap-3 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-500`}>
+              <div key={i} className={`flex ${isUser ? 'flex-row-reverse' : 'flex-row'} items-start gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500`}>
                 <div className="flex-shrink-0 mt-1">
                   {isUser ? (
-                    <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="w-10 h-10 rounded-2xl bg-[#111827] border-2 border-[#111827] flex items-center justify-center shadow-lg">
+                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                       </svg>
                     </div>
                   ) : (
-                    <div className="relative">
+                    <div className="relative group">
                       <img 
                         src={AVATARS[persona]} 
                         alt={persona}
-                        className={`w-10 h-10 rounded-full border-2 object-cover shadow-md ${
-                          isSafetyProtocol ? 'border-red-500 animate-pulse' : isMike ? 'border-slate-800' : 'border-[#E31937]'
+                        className={`w-12 h-12 rounded-2xl border-2 object-cover shadow-xl transition-all duration-300 ${
+                          isSafetyProtocol ? 'border-red-500 animate-pulse scale-110' : isMike ? 'border-slate-800' : 'border-[#E31937]'
                         }`}
                       />
+                      {isSessionActive && !isUser && (
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}>
-                  <div className={`flex items-center gap-2 mb-1 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <span className={`text-[9px] font-black uppercase tracking-widest ${
-                      isUser ? 'text-[#6B7280]' : 
-                      isSafetyProtocol ? 'text-red-600 font-extrabold' :
+                <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[85%]`}>
+                  <div className={`flex items-center gap-2 mb-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span className={`text-[10px] font-black uppercase tracking-[0.25em] ${
+                      isUser ? 'text-slate-500' : 
+                      isSafetyProtocol ? 'text-red-600' :
                       isMike ? 'text-slate-900' : 'text-[#E31937]'
                     }`}>
-                      {isUser ? 'Caller' : isMike ? (isSafetyProtocol ? 'MIKE - SAFETY ALERT' : 'Mike') : 'Mia'}
+                      {isUser ? 'Caller' : isMike ? (isSafetyProtocol ? 'Critical Protocol' : 'Agent: Mike') : 'Agent: Mia'}
                     </span>
                   </div>
                   
                   <div 
-                    className={`relative px-4 py-3 rounded-[1.25rem] text-[12.5px] font-medium leading-[1.6] shadow-md transition-all duration-500 ${
+                    className={`relative px-5 py-4 rounded-[1.75rem] text-[14px] font-bold leading-relaxed shadow-2xl transition-all duration-500 border-2 ${
                       isUser 
-                        ? 'bg-white border border-[#E9EBEE] text-[#1A1A1A] rounded-tr-none' 
+                        ? 'bg-white border-slate-200 text-[#111827] rounded-tr-none' 
                         : isSafetyProtocol
-                          ? 'bg-red-700 text-white border-4 border-amber-400 rounded-tl-none uppercase'
+                          ? 'bg-red-700 text-white border-yellow-400 rounded-tl-none uppercase tracking-tight shadow-[0_0_30px_rgba(239,68,68,0.3)]'
                           : isMike 
-                            ? 'bg-slate-900 text-white rounded-tl-none' 
-                            : 'bg-[#E31937] text-white rounded-tl-none'
+                            ? 'bg-[#111827] text-white border-[#111827] rounded-tl-none' 
+                            : 'bg-[#E31937] text-white border-[#E31937] rounded-tl-none'
                     }`}
                   >
                     {entry.text}
@@ -224,17 +212,36 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
         )}
       </div>
 
-      <div className="flex-shrink-0 pt-2 pb-1">
+      <div className="flex-shrink-0 pt-4 pb-2">
         <button
           onClick={isSessionActive ? stopSession : startSession}
           disabled={isConnecting}
-          className={`w-full py-5 rounded-[1.75rem] font-black text-[10px] lg:text-[11px] uppercase tracking-[0.3em] transition-all duration-300 shadow-xl flex items-center justify-center gap-3 active:scale-[0.97] border-2 ${
+          className={`w-full py-6 rounded-[2.25rem] font-black text-[12px] lg:text-[13px] uppercase tracking-[0.4em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-center gap-4 active:scale-[0.96] border-2 group ${
             isSessionActive 
               ? 'bg-white border-[#E31937] text-[#E31937] hover:bg-slate-50' 
               : 'bg-[#E31937] border-[#E31937] text-white hover:bg-[#C1132C]'
           } ${isConnecting ? 'opacity-70 cursor-wait' : ''}`}
         >
-          {isConnecting ? 'Establishing Link...' : isSessionActive ? 'Disconnect Line' : 'Connect to Receptionist'}
+          {isConnecting ? (
+            <>
+              <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-current rounded-full animate-bounce [animation-delay:0.2s]"></div>
+              <div className="w-2 h-2 bg-current rounded-full animate-bounce [animation-delay:0.4s]"></div>
+            </>
+          ) : (
+            <>
+              {isSessionActive ? (
+                <svg className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              )}
+              {isSessionActive ? 'End Secure Line' : 'Start AI Session'}
+            </>
+          )}
         </button>
       </div>
     </div>
