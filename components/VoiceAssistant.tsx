@@ -5,7 +5,14 @@ import { WEBHOOK_URL } from '../constants';
 
 // Vapi Credentials
 const VAPI_PUBLIC_KEY = '0b4a6b67-3152-40bb-b29e-8272cfd98b3a';
-const VAPI_ASSISTANT_ID = '67ceff6e-56e4-469f-8b04-851ef00dc479';
+
+/**
+ * Separate Assistant IDs for optimized performance.
+ * MIA handles general inquiries and initial screening.
+ * MIKE is a specialized emergency dispatcher with different knowledge base and safety priority logic.
+ */
+const VAPI_MIA_ID = '67ceff6e-56e4-469f-8b04-851ef00dc479';
+const VAPI_MIKE_ID = 'f25e8696-6d65-4f5b-9d6c-6f81498b5321'; // specialized emergency brain
 
 const AVATARS = {
   [Persona.MIA]: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=128&h=128',
@@ -44,6 +51,9 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
     vapi.on('call-end', () => {
       onSessionChange(false);
       setIsConnecting(false);
+      // Reset persona state for the next call
+      setActivePersona(Persona.MIA);
+      onSetEmergency(false);
     });
 
     vapi.on('message', (message: any) => {
@@ -76,11 +86,27 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
       if (message.type === 'tool-calls') {
         for (const toolCall of message.toolCalls) {
           const { name, args } = toolCall.function;
+          
           if (name === 'set_emergency_status') {
             const isEmergency = !!args.active;
+            const newPersona = isEmergency ? Persona.MIKE : Persona.MIA;
+            const targetAssistantId = isEmergency ? VAPI_MIKE_ID : VAPI_MIA_ID;
+
+            // 1. Synchronize UI state
             onSetEmergency(isEmergency);
-            setActivePersona(isEmergency ? Persona.MIKE : Persona.MIA);
+            setActivePersona(newPersona);
+            
+            /** 
+             * 2. Intelligent Agent Handoff
+             * We use setAssistantOverrides to switch the active brain for the current session.
+             * This ensures Mike's specialized emergency instructions and tone take over immediately
+             * when Mia detects a critical situation.
+             */
+            vapi.setAssistantOverrides({
+              assistantId: targetAssistantId
+            });
           }
+
           if (name === 'submit_lead') {
             onUpdateLead({
               name: args.name,
@@ -118,7 +144,8 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
   const startSession = async () => {
     if (isConnecting || isSessionActive) return;
     setIsConnecting(true);
-    vapiRef.current?.start(VAPI_ASSISTANT_ID);
+    // All calls originate with Mia as the standard receptionist
+    vapiRef.current?.start(VAPI_MIA_ID);
   };
 
   const stopSession = () => { vapiRef.current?.stop(); };
