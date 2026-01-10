@@ -149,6 +149,9 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
             const isUser = entry.role === 'user';
             const persona = entry.persona || activePersona;
             const isMike = persona === Persona.MIKE;
+            const isLatestMessage = i === transcription.length - 1;
+            const isAgentSpeaking = !isUser && isLatestMessage && isSessionActive;
+            
             const textLower = entry.text.toLowerCase();
             const isSafetyProtocol = isMike && (
               textLower.includes('911') || 
@@ -171,7 +174,11 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
                         src={AVATARS[persona]} 
                         alt={persona}
                         className={`w-12 h-12 rounded-2xl border-2 object-cover shadow-xl transition-all duration-300 ${
-                          isSafetyProtocol ? 'border-red-500 animate-pulse scale-110' : isMike ? 'border-slate-800' : 'border-[#E31937]'
+                          isSafetyProtocol 
+                            ? 'border-red-500 animate-pulse scale-110' 
+                            : isAgentSpeaking
+                              ? isMike ? 'border-slate-800 animate-speaking-mike' : 'border-[#E31937] animate-speaking-mia'
+                              : isMike ? 'border-slate-800' : 'border-[#E31937]'
                         }`}
                       />
                       {isSessionActive && !isUser && (
@@ -190,6 +197,13 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({
                     }`}>
                       {isUser ? 'Caller' : isMike ? (isSafetyProtocol ? 'Critical Protocol' : 'Agent: Mike') : 'Agent: Mia'}
                     </span>
+                    {!isUser && isAgentSpeaking && (
+                       <div className="flex gap-0.5 ml-1">
+                          <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-1 h-1 bg-current rounded-full animate-bounce"></div>
+                       </div>
+                    )}
                   </div>
                   
                   <div 
