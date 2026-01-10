@@ -143,7 +143,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, isEmergency, isActive }) =>
                    <span className="text-[12px] font-black uppercase tracking-[0.4em] text-[#E31937]">Enercare Priority</span>
                 </div>
                 <h3 className="text-4xl lg:text-5xl font-black mb-3 uppercase leading-[0.9] tracking-tighter">Advantage<br/><span className="text-slate-500">Upgrade</span></h3>
-                <p className="text-slate-400 text-base font-semibold max-w-sm leading-relaxed">Schedule a premium assessment and unlock multi-measure rebates up to <span className="text-white font-black text-lg underline decoration-[#E31937] underline-offset-4">$7,700</span>.</p>
+                <p className="text-slate-400 text-base font-semibold max-w-sm leading-relaxed">Schedule a premium assessment and unlock multi-measure rebates up to <span className="text-white font-black text-lg underline decoration-[#E31937] underline-offset-4">{HRS_PROGRAM_DETAILS.multiMeasure}</span>.</p>
              </div>
              
              <a 

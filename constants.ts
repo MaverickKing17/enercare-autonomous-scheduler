@@ -7,7 +7,7 @@ export const HRS_PROGRAM_DETAILS = {
   gasRebate: "$2,000",
   oilPropaneRebate: "$10,000+",
   atticRebate: "$1,000",
-  multiMeasure: "$7,700",
+  multiMeasure: "$10,600",
   assessmentReimbursement: "$600"
 };
 
